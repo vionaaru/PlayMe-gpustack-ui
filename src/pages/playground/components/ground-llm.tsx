@@ -18,11 +18,12 @@ import { useInitLLmMeta } from '../hooks/use-init-meta';
 import '../style/ground-llm.less';
 import '../style/system-message-wrap.less';
 import { generateLLMCode } from '../view-code/llm';
+import ChatPresets from './chat-presets';
 import DynamicParams from './dynamic-params';
 import MessageInput from './message-input';
 import MessageContent from './multiple-chat/message-content';
-import SystemMessage from './multiple-chat/system-message';
 import ReferenceParams from './reference-params';
+import SystemMessageModules from './system-message-modules';
 import ViewCommonCode from './view-common-code';
 
 interface MessageProps {
@@ -60,7 +61,9 @@ const GroundLeft: React.FC<MessageProps> = forwardRef((props, ref) => {
     paramsRef,
     paramsConfig,
     initialValues,
-    parameters
+    parameters,
+    setInitialValues,
+    setParams
   } = useInitLLmMeta(
     { modelList, isChat: true },
     {
@@ -121,6 +124,16 @@ const GroundLeft: React.FC<MessageProps> = forwardRef((props, ref) => {
     setShow(false);
   };
 
+  const handleApplyPreset = (presetValues: Record<string, any>) => {
+    const nextValues = {
+      ...parameters,
+      ...presetValues
+    };
+    formRef.current?.form?.setFieldsValue(nextValues);
+    setParams(nextValues);
+    setInitialValues(nextValues);
+  };
+
   return (
     <div className="ground-left-wrapper">
       <div className="ground-left">
@@ -131,14 +144,7 @@ const GroundLeft: React.FC<MessageProps> = forwardRef((props, ref) => {
                 marginBottom: 20
               }}
             >
-              <SystemMessage
-                style={{
-                  borderRadius: 'var(--border-radius-mini)',
-                  overflow: 'hidden'
-                }}
-                systemMessage={systemMessage}
-                setSystemMessage={setSystemMessage}
-              ></SystemMessage>
+              <SystemMessageModules onChange={setSystemMessage} />
             </div>
 
             <div className="content">
@@ -194,6 +200,12 @@ const GroundLeft: React.FC<MessageProps> = forwardRef((props, ref) => {
             initialValues={initialValues}
             modelList={modelList}
             showModelSelector={true}
+            extra={
+              <ChatPresets
+                parameters={parameters}
+                onApply={handleApplyPreset}
+              />
+            }
           />
         </div>
       </div>

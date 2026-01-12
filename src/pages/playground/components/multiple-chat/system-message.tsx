@@ -19,18 +19,20 @@ const SystemMessage: React.FC<SystemMessageProps> = (props) => {
   const intl = useIntl();
   const [applyToAllModels, setApplyToAllModels] = useState(false);
   const systemMessageRef = React.useRef<any>(null);
-  const [autoSize, setAutoSize] = useState<{
-    minRows: number;
-    maxRows: number;
-    focus: boolean;
-  }>({ minRows: 1, maxRows: 1, focus: false });
+  const [isFocused, setIsFocused] = useState(false);
+  const [textAreaHeight, setTextAreaHeight] = useState<number | undefined>(
+    undefined
+  );
+
+  const syncTextAreaHeight = () => {
+    const textArea = systemMessageRef.current?.resizableTextArea?.textArea;
+    if (textArea?.offsetHeight) {
+      setTextAreaHeight(textArea.offsetHeight);
+    }
+  };
 
   const handleFocus = () => {
-    setAutoSize({
-      minRows: 4,
-      maxRows: 4,
-      focus: true
-    });
+    setIsFocused(true);
     setTimeout(() => {
       systemMessageRef.current?.focus?.({
         cursor: 'end'
@@ -39,11 +41,8 @@ const SystemMessage: React.FC<SystemMessageProps> = (props) => {
   };
 
   const handleBlur = (e: any) => {
-    setAutoSize({
-      minRows: 1,
-      maxRows: 1,
-      focus: false
-    });
+    syncTextAreaHeight();
+    setIsFocused(false);
   };
 
   const handleOnChange = (e: any) => {
@@ -71,13 +70,13 @@ const SystemMessage: React.FC<SystemMessageProps> = (props) => {
   return (
     <div
       className={classNames('sys-message', {
-        focus: autoSize.focus
+        focus: isFocused
       })}
       style={{ ...style }}
     >
       {
         <div
-          style={{ display: autoSize.focus ? 'block' : 'none' }}
+          style={{ display: isFocused ? 'block' : 'none' }}
           className="textarea-wrapper"
         >
           <span className="system-label">
@@ -90,16 +89,16 @@ const SystemMessage: React.FC<SystemMessageProps> = (props) => {
             placeholder={intl.formatMessage({ id: 'playground.system.tips' })}
             style={{
               borderRadius: '0',
-              border: 'none'
+              border: 'none',
+              resize: 'vertical',
+              height: textAreaHeight
             }}
             value={systemMessage}
-            autoSize={{
-              minRows: autoSize.minRows,
-              maxRows: autoSize.maxRows
-            }}
+            rows={4}
             onFocus={handleFocus}
             onBlur={handleBlur}
             allowClear={false}
+            onMouseUp={syncTextAreaHeight}
             onChange={handleOnChange}
           ></Input.TextArea>
           {showApplyToAll && (
@@ -115,7 +114,7 @@ const SystemMessage: React.FC<SystemMessageProps> = (props) => {
           <Divider style={{ margin: '0' }}></Divider>
         </div>
       }
-      {!autoSize.focus && (
+      {!isFocused && (
         <div className="sys-content-wrap" onClick={handleFocus}>
           <div className="sys-content">
             <span className="title">

@@ -1,4 +1,4 @@
-import { GPUStackVersionAtom, UpdateCheckAtom } from '@/atoms/user';
+import { GPUStackVersionAtom, UpdateCheckAtom, userAtom } from '@/atoms/user';
 import { setAtomStorage } from '@/atoms/utils';
 import { DEFAULT_ENTER_PAGE, GPUSTACK_API_BASE_URL } from '@/config/settings';
 import { requestConfig } from '@/request-config';
@@ -18,6 +18,42 @@ import { message } from 'antd';
 
 // only for the first login and access from http://localhost
 
+const DEV_AUTH_STORAGE_KEY = 'gpustack.dev.auth';
+
+const getDevBypassUser = () => {
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const { hostname, search } = window.location;
+  const isLocalhost =
+    hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  if (!isLocalhost) {
+    return null;
+  }
+  const params = new URLSearchParams(search);
+  const hasFlag =
+    params.get('devAuth') === '1' ||
+    localStorage.getItem(DEV_AUTH_STORAGE_KEY) === '1';
+  if (!hasFlag) {
+    return null;
+  }
+  if (params.get('devAuth') === '1') {
+    localStorage.setItem(DEV_AUTH_STORAGE_KEY, '1');
+  }
+  return {
+    username: 'dev',
+    is_admin: false,
+    full_name: 'Dev User',
+    require_password_change: false,
+    id: 1,
+    source: 'Local',
+    avatar_url: ''
+  } as Global.UserInfo;
+};
+
 const checkDefaultPage = async (userInfo: any) => {
   const isFirstLogin = await readState(IS_FIRST_LOGIN);
   if (isFirstLogin === null && isOnline()) {
@@ -34,6 +70,7 @@ export async function getInitialState(): Promise<{
   currentUser?: Global.UserInfo;
 }> {
   const { location } = history;
+  const devUser = getDevBypassUser();
 
   const getUpdateCheck = async () => {
     try {
@@ -95,6 +132,15 @@ export async function getInitialState(): Promise<{
   };
 
   getAppVersionInfo();
+
+  if (devUser) {
+    setAtomStorage(userAtom, devUser);
+    checkDefaultPage(devUser);
+    return {
+      fetchUserInfo: async () => devUser,
+      currentUser: devUser
+    };
+  }
 
   if (![DEFAULT_ENTER_PAGE.login].includes(location.pathname)) {
     const userInfo = await fetchUserInfo();
