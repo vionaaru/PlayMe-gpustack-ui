@@ -5,6 +5,7 @@ import {
   DownOutlined,
   EditOutlined,
   EyeOutlined,
+  HistoryOutlined,
   MenuOutlined,
   UpOutlined
 } from '@ant-design/icons';
@@ -12,6 +13,8 @@ import { useIntl } from '@umijs/max';
 import { Button, Input, Popover, Typography, message } from 'antd';
 import classNames from 'classnames';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Roles } from '../config';
+import { MessageItem } from '../config/types';
 import '../style/sys-message-modules.less';
 
 type ModuleItem = {
@@ -24,11 +27,13 @@ type ModuleItem = {
 type SystemMessageModulesProps = {
   onChange: (value: string) => void;
   initialContent?: string;
+  messageList?: MessageItem[];
 };
 
 const SystemMessageModules: React.FC<SystemMessageModulesProps> = ({
   onChange,
-  initialContent = ''
+  initialContent = '',
+  messageList = []
 }) => {
   const intl = useIntl();
   const idRef = useRef(1);
@@ -40,6 +45,15 @@ const SystemMessageModules: React.FC<SystemMessageModulesProps> = ({
   });
   const newTitleBase = intl.formatMessage({
     id: 'playground.system.modules.new'
+  });
+  const historyLabel = intl.formatMessage({
+    id: 'playground.system.modules.history'
+  });
+  const historyImagesLabel = intl.formatMessage({
+    id: 'playground.system.modules.history.images'
+  });
+  const historyAudioLabel = intl.formatMessage({
+    id: 'playground.system.modules.history.audio'
   });
 
   const createModule = (
@@ -74,6 +88,44 @@ const SystemMessageModules: React.FC<SystemMessageModulesProps> = ({
     const tokens = text ? Math.ceil(chars / 4) : 0;
     return { chars, tokens };
   }, [combinedMessage]);
+
+  const historyPreview = useMemo(() => {
+    if (!messageList.length) {
+      return '';
+    }
+    return messageList
+      .map((item) => {
+        const roleLabel =
+          item.role === Roles.User
+            ? intl.formatMessage({ id: 'playground.user' })
+            : item.role === Roles.Assistant
+              ? intl.formatMessage({ id: 'playground.assistant' })
+              : item.role === Roles.System
+                ? intl.formatMessage({ id: 'playground.system' })
+                : item.role;
+        const parts: string[] = [];
+        const text = item.content?.trim();
+        if (text) {
+          parts.push(text);
+        }
+        if (item.imgs?.length) {
+          parts.push(`[${historyImagesLabel}: ${item.imgs.length}]`);
+        }
+        if (item.audio?.length) {
+          parts.push(`[${historyAudioLabel}: ${item.audio.length}]`);
+        }
+        const body = parts.join(' ');
+        return `${roleLabel}: ${body}`.trim();
+      })
+      .join('\n\n');
+  }, [messageList, intl, historyImagesLabel, historyAudioLabel]);
+
+  const historySummary = useMemo(() => {
+    const text = historyPreview.trim();
+    const chars = text.length;
+    const tokens = text ? Math.ceil(chars / 4) : 0;
+    return { chars, tokens };
+  }, [historyPreview]);
 
   const allCollapsed = useMemo(() => {
     return modules.length > 0 && modules.every((item) => item.collapsed);
@@ -307,6 +359,39 @@ const SystemMessageModules: React.FC<SystemMessageModulesProps> = ({
               {intl.formatMessage({
                 id: 'playground.system.modules.preview'
               })}
+            </Button>
+          </Popover>
+          <Popover
+            trigger="click"
+            placement="bottomRight"
+            content={
+              <div className="sys-modules-preview-popover">
+                <div className="sys-modules-preview-header">
+                  <span>{historyLabel}</span>
+                  <span className="sys-modules-preview-meta">
+                    {intl.formatMessage({
+                      id: 'playground.system.modules.chars'
+                    })}{' '}
+                    {historySummary.chars}
+                    {' ú '}
+                    {intl.formatMessage({
+                      id: 'playground.system.modules.tokens'
+                    })}{' '}
+                    {historySummary.tokens}
+                  </span>
+                </div>
+                <Input.TextArea
+                  value={historyPreview}
+                  readOnly
+                  rows={8}
+                  className="custome-scrollbar"
+                  variant="filled"
+                />
+              </div>
+            }
+          >
+            <Button size="small" icon={<HistoryOutlined />}>
+              {historyLabel}
             </Button>
           </Popover>
           <Button size="small" onClick={handleToggleAll}>

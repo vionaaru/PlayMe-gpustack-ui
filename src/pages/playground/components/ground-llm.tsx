@@ -144,7 +144,10 @@ const GroundLeft: React.FC<MessageProps> = forwardRef((props, ref) => {
                 marginBottom: 20
               }}
             >
-              <SystemMessageModules onChange={setSystemMessage} />
+              <SystemMessageModules
+                onChange={setSystemMessage}
+                messageList={messageList}
+              />
             </div>
 
             <div className="content">
