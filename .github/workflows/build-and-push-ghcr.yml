@@ -1,4 +1,4 @@
-name: Build & Push GPUStack UI image to GHCR
+name: Build & Push GPUStack custom UI image to GHCR
 
 on:
   push:
@@ -10,11 +10,36 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Enable corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.3.0 --activate
+          pnpm --version
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build UI
+        run: pnpm build
+
+      - name: Verify dist exists
+        run: |
+          test -f dist/index.html
+          echo "dist OK"
+          ls -la dist | head -n 200
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -26,7 +51,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
