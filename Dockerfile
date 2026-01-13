@@ -1,11 +1,14 @@
 # stage 1: build UI
 FROM node:20-alpine AS ui
 WORKDIR /app
-
 RUN corepack enable
-COPY . .
 
+# кешируем зависимости
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
+
+# потом исходники
+COPY . .
 RUN pnpm build
 
 # stage 2: gpustack + custom UI
